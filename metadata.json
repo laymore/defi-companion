@@ -1,0 +1,9 @@
+{
+  "name": "DeepTrade Master",
+  "description": "DeepTrade AI Assistant tích hợp DeepBook V3 SDK. Chuyên biệt cho SUI, WAL và DEEP/DEEPTRADE.",
+  "requestFramePermissions": [
+    "microphone",
+    "clipboard-read"
+  ],
+  "majorCapabilities": []
+}

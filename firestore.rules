@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /users/{userId} {
+      function isValidUserProfile(data) {
+        return data.keys().hasAll(['email', 'createdAt'])
+            && data.email is string
+            && data.email.size() <= 200
+            && data.createdAt is int
+            && (!data.keys().hasAny(['soulBlobId']) || (data.soulBlobId is string && data.soulBlobId.size() <= 128))
+            && (!data.keys().hasAny(['lastUpdated']) || data.lastUpdated is int);
+      }
+      allow get: if isSignedIn() && isOwner(userId) && isValidId(userId);
+      allow create: if isSignedIn() && isOwner(userId) && isValidId(userId)
+                    && isValidUserProfile(request.resource.data)
+                    && request.resource.data.createdAt <= request.time.toMillis() + 60000
+                    && request.resource.data.createdAt >= request.time.toMillis() - 60000
+                    && request.resource.data.email == request.auth.token.email;
+      allow update: if isSignedIn() && isOwner(userId) && isValidId(userId)
+                    && isValidUserProfile(request.resource.data)
+                    && request.resource.data.email == request.auth.token.email;
+      allow delete: if false;
+      allow list: if false;
+
+      match /secrets/{secretId} {
+        function isValidSecret(data) {
+          return data.keys().hasAll(['encryptedData', 'updatedAt'])
+              && data.encryptedData is string
+              && data.updatedAt is int;
+        }
+
+        allow read: if isSignedIn() && isOwner(userId);
+        allow create, update: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidSecret(request.resource.data);
+        allow delete: if false;
+      }
+
+
+      match /messages/{messageId} {
+        function isValidMessage(data) {
+          return data.keys().hasAll(['text', 'sender', 'createdAt'])
+              && data.keys().size() == 3
+              && data.text is string
+              && data.text.size() <= 10000
+              && data.sender is string
+              && data.sender in ["user", "ai"]
+              && data.createdAt is int;
+        }
+
+        allow get: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(messageId);
+        allow list: if isSignedIn() && isOwner(userId) && isValidId(userId);
+        allow create: if isSignedIn() && isOwner(userId) && isValidId(userId) && isValidId(messageId)
+                      && isValidMessage(request.resource.data);
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+  }
+}

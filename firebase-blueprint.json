@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "Message": {
+      "title": "Message",
+      "description": "An AI chat message.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "sender": { "type": "string", "enum": ["user", "ai"] },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["text", "sender", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with agent soul references.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "soulBlobId": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles"
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Chat messages between user and AI"
+    }
+  }
+}
